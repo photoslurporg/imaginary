@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"crypto/tls"
 	"strconv"
 )
 
@@ -37,7 +38,14 @@ func (s *HttpImageSource) fetchImage(url *url.URL, ireq *http.Request) ([]byte, 
 	// Check remote image size by fetching HTTP Headers
 	if s.Config.MaxAllowedSize > 0 {
 		req := newHTTPRequest(s, ireq, "HEAD", url)
-		res, err := http.DefaultClient.Do(req)
+		client := *http.DefaultClient
+		if s.Config.IgnoreCertErrors {
+			tr := &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			}
+			client = http.Client{Transport: tr}
+		}
+		res, err := client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("Error fetching image http headers: %v", err)
 		}
@@ -54,7 +62,14 @@ func (s *HttpImageSource) fetchImage(url *url.URL, ireq *http.Request) ([]byte, 
 
 	// Perform the request using the default client
 	req := newHTTPRequest(s, ireq, "GET", url)
-	res, err := http.DefaultClient.Do(req)
+	client := *http.DefaultClient
+	if s.Config.IgnoreCertErrors {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		client = http.Client{Transport: tr}
+	}
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("Error downloading image: %v", err)
 	}

@@ -45,6 +45,7 @@ var (
 	aBurst             = flag.Int("burst", 100, "Throttle burst max cache size")
 	aMRelease          = flag.Int("mrelease", 30, "OS memory release interval in seconds")
 	aCpus              = flag.Int("cpus", runtime.GOMAXPROCS(-1), "Number of cpu cores to use")
+	aIgnoreCertErrors  = flag.Bool("ignore-cert-errors", false, "Disables certificate checks for remote images")
 )
 
 const usage = `imaginary %s
@@ -92,6 +93,7 @@ Options:
   -mrelease <num>           OS memory release interval in seconds [default: 30]
   -cpus <num>               Number of used cpu cores.
                             (default for current machine is %d cores)
+  -ignore-cert-errors       Disables certificate checks for remote images
 `
 
 func main() {
@@ -132,6 +134,7 @@ func main() {
 		Authorization:     *aAuthorization,
 		AlloweOrigins:     parseOrigins(*aAlloweOrigins),
 		MaxAllowedSize:    *aMaxAllowedSize,
+		IgnoreCertErrors:  *aIgnoreCertErrors,
 	}
 
 	// Show warning if gzip flag is passed

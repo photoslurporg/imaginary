@@ -34,6 +34,8 @@ type ServerOptions struct {
 	PlaceholderImage  []byte
 	Endpoints         Endpoints
 	AlloweOrigins     []*url.URL
+	MaxAllowedSize    int
+	IgnoreCertErrors  bool
 }
 
 // Endpoints represents a list of endpoint names to disable.
