@@ -1,7 +1,7 @@
 # Start from a Debian image with the latest version of Go installed
 # and a workspace (GOPATH) configured at /go.
 FROM ubuntu:16.04 as builder
-MAINTAINER tomas@aparicio.me
+MAINTAINER bence@photoslurp.com
 
 ENV LIBVIPS_VERSION 8.6.3
 
@@ -66,10 +66,10 @@ RUN go get -u golang.org/x/net/context
 RUN go get -u github.com/golang/dep/cmd/dep
 
 # Copy imaginary sources
-COPY . $GOPATH/src/github.com/h2non/imaginary
+COPY . $GOPATH/src/github.com/benctamas/imaginary
 
 # Compile imaginary
-RUN go build -race -o bin/imaginary github.com/h2non/imaginary
+RUN go build -race -o bin/imaginary github.com/benctamas/imaginary
 
 FROM ubuntu:16.04
 
