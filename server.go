@@ -36,6 +36,7 @@ type ServerOptions struct {
 	AlloweOrigins     []*url.URL
 	MaxAllowedSize    int
 	IgnoreCertErrors  bool
+	UserAgent	  string
 }
 
 // Endpoints represents a list of endpoint names to disable.

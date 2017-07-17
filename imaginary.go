@@ -46,6 +46,7 @@ var (
 	aMRelease          = flag.Int("mrelease", 30, "OS memory release interval in seconds")
 	aCpus              = flag.Int("cpus", runtime.GOMAXPROCS(-1), "Number of cpu cores to use")
 	aIgnoreCertErrors  = flag.Bool("ignore-cert-errors", false, "Disables certificate checks for remote images")
+	aUserAgent         = flag.String("user-agent", "imaginary/"+Version, "User-Agent to send to remote sources")
 )
 
 const usage = `imaginary %s
@@ -94,6 +95,7 @@ Options:
   -cpus <num>               Number of used cpu cores.
                             (default for current machine is %d cores)
   -ignore-cert-errors       Disables certificate checks for remote images
+  -user-agent               User-Agent to send to remote sources
 `
 
 func main() {
@@ -135,6 +137,7 @@ func main() {
 		AlloweOrigins:     parseOrigins(*aAlloweOrigins),
 		MaxAllowedSize:    *aMaxAllowedSize,
 		IgnoreCertErrors:  *aIgnoreCertErrors,
+		UserAgent:         *aUserAgent,
 	}
 
 	// Show warning if gzip flag is passed
