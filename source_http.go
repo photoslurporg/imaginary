@@ -116,7 +116,7 @@ func parseURL(request *http.Request) (*url.URL, error) {
 
 func newHTTPRequest(s *HTTPImageSource, ireq *http.Request, method string, url *url.URL) *http.Request {
 	req, _ := http.NewRequest(method, url.String(), nil)
-	req.Header.Set("User-Agent", "imaginary/"+Version)
+	req.Header.Set("User-Agent", s.Config.UserAgent)
 	req.URL = url
 
 	if len(s.Config.ForwardHeaders) != 0 {

@@ -38,6 +38,7 @@ type ServerOptions struct {
 	Endpoints          Endpoints
 	AllowedOrigins     []*url.URL
 	IgnoreCertErrors   bool
+	UserAgent          string
 }
 
 // Endpoints represents a list of endpoint names to disable.
