@@ -38,7 +38,7 @@ WORKDIR /tmp
 RUN curl -fsSL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "${GOPATH}/bin" v1.16.0
 
 
-WORKDIR ${GOPATH}/src/github.com/h2non/imaginary
+WORKDIR ${GOPATH}/src/github.com/photoslurporg/imaginary
 
 # Copy imaginary sources
 COPY . .
@@ -54,17 +54,17 @@ RUN GO111MODULE=off golangci-lint run ./...
 RUN GO111MODULE=off go build -a \
     -o ${GOPATH}/bin/imaginary \
     -ldflags="-s -w -h -X main.Version=${IMAGINARY_VERSION}" \
-    github.com/h2non/imaginary
+    github.com/photoslurporg/imaginary
 
 FROM debian:stretch-slim
 
 ARG IMAGINARY_VERSION
 
-LABEL maintainer="tomas@aparicio.me" \
+LABEL maintainer="evren@photoslurp.com" \
       org.label-schema.description="Fast, simple, scalable HTTP microservice for high-level image processing with first-class Docker support" \
       org.label-schema.schema-version="1.0" \
-      org.label-schema.url="https://github.com/h2non/imaginary" \
-      org.label-schema.vcs-url="https://github.com/h2non/imaginary" \
+      org.label-schema.url="https://github.com/photoslurporg/imaginary" \
+      org.label-schema.vcs-url="https://github.com/photoslurporg/imaginary" \
       org.label-schema.version="${IMAGINARY_VERSION}"
 
 COPY --from=builder /usr/local/lib /usr/local/lib
