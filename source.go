@@ -17,6 +17,7 @@ type SourceConfig struct {
 	AllowedOrigins []*url.URL
 	MaxAllowedSize int
 	IgnoreCertErrors bool
+	UserAgent      string
 }
 
 var imageSourceMap = make(map[ImageSourceType]ImageSource)
@@ -42,6 +43,7 @@ func LoadSources(o ServerOptions) {
 			MaxAllowedSize: o.MaxAllowedSize,
 			ForwardHeaders: o.ForwardHeaders,
 			IgnoreCertErrors: o.IgnoreCertErrors,
+			UserAgent: o.UserAgent,
 		})
 	}
 }
