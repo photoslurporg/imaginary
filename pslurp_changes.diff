@@ -1,0 +1,172 @@
+diff --git a/Dockerfile b/Dockerfile
+index a4e3f4a..aa0fde4 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -1,7 +1,7 @@
+ ARG GOLANG="1.11.5"
+ FROM golang:${GOLANG} as builder
+ 
+-ARG IMAGINARY_VERSION="dev"
++ARG IMAGINARY_VERSION="1.1.1"
+ ARG LIBVIPS_VERSION="8.7.4"
+ ARG GOLANG
+ 
+@@ -60,7 +60,7 @@ FROM debian:stretch-slim
+ 
+ ARG IMAGINARY_VERSION
+ 
+-LABEL maintainer="tomas@aparicio.me" \
++LABEL maintainer="evren@photoslurp.com" \
+       org.label-schema.description="Fast, simple, scalable HTTP microservice for high-level image processing with first-class Docker support" \
+       org.label-schema.schema-version="1.0" \
+       org.label-schema.url="https://github.com/h2non/imaginary" \
+diff --git a/Makefile b/Makefile
+index be99809..e79cf3b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -16,11 +16,11 @@ benchmark: build
+ 
+ docker-build:
+ 	@echo "$(OK_COLOR)==> Building Docker image$(NO_COLOR)"
+-	docker build --no-cache=true -t h2non/imaginary:$(VERSION) .
++	docker build --no-cache=true -t pslurp/imaginary:$(VERSION) .
+ 
+ docker-push:
+ 	@echo "$(OK_COLOR)==> Pushing Docker image v$(VERSION) $(NO_COLOR)"
+-	docker push h2non/imaginary:$(VERSION)
++	docker push pslurp/imaginary:$(VERSION)
+ 
+ docker: docker-build docker-push
+ 
+diff --git a/imaginary.go b/imaginary.go
+index f38da13..0760a8f 100644
+--- a/imaginary.go
++++ b/imaginary.go
+@@ -48,6 +48,8 @@ var (
+ 	aBurst              = flag.Int("burst", 100, "Throttle burst max cache size")
+ 	aMRelease           = flag.Int("mrelease", 30, "OS memory release interval in seconds")
+ 	aCpus               = flag.Int("cpus", runtime.GOMAXPROCS(-1), "Number of cpu cores to use")
++	aIgnoreCertErrors   = flag.Bool("ignore-cert-errors", false, "Disables certificate checks for remote images")
++	aUserAgent          = flag.String("user-agent", "imaginary/"+Version, "User-Agent to send to remote sources")
+ )
+ 
+ const usage = `imaginary %s
+@@ -100,6 +102,8 @@ Options:
+   -mrelease <num>           OS memory release interval in seconds [default: 30]
+   -cpus <num>               Number of used cpu cores.
+                             (default for current machine is %d cores)
++	-ignore-cert-errors       Disables certificate checks for remote images
++	-user-agent               User-Agent to send to remote sources
+ `
+ 
+ type URLSignature struct {
+@@ -149,6 +153,8 @@ func main() {
+ 		ForwardHeaders:     parseForwardHeaders(*aForwardHeaders),
+ 		AllowedOrigins:     parseOrigins(*aAllowedOrigins),
+ 		MaxAllowedSize:     *aMaxAllowedSize,
++		IgnoreCertErrors:   *aIgnoreCertErrors,
++		UserAgent:         *aUserAgent,
+ 	}
+ 
+ 	// Show warning if gzip flag is passed
+diff --git a/server.go b/server.go
+index 6e35ca9..729d3ad 100644
+--- a/server.go
++++ b/server.go
+@@ -37,6 +37,8 @@ type ServerOptions struct {
+ 	PlaceholderImage   []byte
+ 	Endpoints          Endpoints
+ 	AllowedOrigins     []*url.URL
++	IgnoreCertErrors   bool
++	UserAgent          string
+ }
+ 
+ // Endpoints represents a list of endpoint names to disable.
+diff --git a/source.go b/source.go
+index 572e6aa..72b73e5 100644
+--- a/source.go
++++ b/source.go
+@@ -16,6 +16,8 @@ type SourceConfig struct {
+ 	ForwardHeaders []string
+ 	AllowedOrigins []*url.URL
+ 	MaxAllowedSize int
++	IgnoreCertErrors bool
++	UserAgent      string
+ }
+ 
+ var imageSourceMap = make(map[ImageSourceType]ImageSource)
+@@ -40,6 +42,8 @@ func LoadSources(o ServerOptions) {
+ 			AllowedOrigins: o.AllowedOrigins,
+ 			MaxAllowedSize: o.MaxAllowedSize,
+ 			ForwardHeaders: o.ForwardHeaders,
++			IgnoreCertErrors: o.IgnoreCertErrors,
++			UserAgent: o.UserAgent,
+ 		})
+ 	}
+ }
+diff --git a/source_http.go b/source_http.go
+index 6cdbbd5..409c132 100644
+--- a/source_http.go
++++ b/source_http.go
+@@ -5,6 +5,7 @@ import (
+ 	"io/ioutil"
+ 	"net/http"
+ 	"net/url"
++	"crypto/tls"
+ 	"strconv"
+ 	"strings"
+ )
+@@ -39,7 +40,14 @@ func (s *HTTPImageSource) fetchImage(url *url.URL, ireq *http.Request) ([]byte,
+ 	// Check remote image size by fetching HTTP Headers
+ 	if s.Config.MaxAllowedSize > 0 {
+ 		req := newHTTPRequest(s, ireq, http.MethodHead, url)
+-		res, err := http.DefaultClient.Do(req)
++		client := *http.DefaultClient
++		if s.Config.IgnoreCertErrors {
++			tr := &http.Transport{
++				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
++			}
++			client = http.Client{Transport: tr}
++		}
++		res, err := client.Do(req)
+ 		if err != nil {
+ 			return nil, fmt.Errorf("error fetching image http headers: %v", err)
+ 		}
+@@ -56,7 +64,14 @@ func (s *HTTPImageSource) fetchImage(url *url.URL, ireq *http.Request) ([]byte,
+ 
+ 	// Perform the request using the default client
+ 	req := newHTTPRequest(s, ireq, http.MethodGet, url)
+-	res, err := http.DefaultClient.Do(req)
++	client := *http.DefaultClient
++	if s.Config.IgnoreCertErrors {
++		tr := &http.Transport{
++			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
++		}
++		client = http.Client{Transport: tr}
++	}
++	res, err := client.Do(req)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("error downloading image: %v", err)
+ 	}
+@@ -101,7 +116,7 @@ func parseURL(request *http.Request) (*url.URL, error) {
+ 
+ func newHTTPRequest(s *HTTPImageSource, ireq *http.Request, method string, url *url.URL) *http.Request {
+ 	req, _ := http.NewRequest(method, url.String(), nil)
+-	req.Header.Set("User-Agent", "imaginary/"+Version)
++	req.Header.Set("User-Agent", s.Config.UserAgent)
+ 	req.URL = url
+ 
+ 	if len(s.Config.ForwardHeaders) != 0 {
+diff --git a/version.go b/version.go
+index 75eb4f7..5491fa2 100644
+--- a/version.go
++++ b/version.go
+@@ -1,7 +1,7 @@
+ package main
+ 
+ // Version stores the current package semantic version
+-var Version = "dev"
++var Version = "1.1.1"
+ 
+ // Versions represents the used versions for several significant dependencies
+ type Versions struct {
